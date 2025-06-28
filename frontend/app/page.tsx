@@ -253,8 +253,8 @@ export default function Home() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {searchResult.products.map((product) => (
-                    <div key={product.id} className="relative">
+                  {searchResult.products.map((product, index) => (
+                    <div key={`${product.id}-${index}`} className="relative">
                       <ProductCard
                         product={product}
                         onViewDetails={handleViewDetails}
@@ -276,9 +276,9 @@ export default function Home() {
                   <div className="mt-8">
                     <h3 className="text-lg font-medium mb-4">More Options</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {searchResult.additional_products.slice(0, 8).map((product) => (
+                      {searchResult.additional_products.slice(0, 8).map((product, index) => (
                         <ProductCard
-                          key={product.id}
+                          key={`${product.id}-additional-${index}`}
                           product={product}
                           onViewDetails={handleViewDetails}
                           onCompare={handleCompare}

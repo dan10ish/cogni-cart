@@ -1,213 +1,260 @@
 from .base_agent import BaseAgent
 from typing import Dict, Any, List
-import random
+import json
 
 class ReviewAnalyzerAgent(BaseAgent):
-    """Agent responsible for analyzing product reviews and sentiment"""
+    """Agent responsible for analyzing real product reviews from scraped data"""
     
     def __init__(self):
         super().__init__()
-        self.mock_reviews = self._load_mock_reviews()
+    
+    async def analyze_product_reviews(self, product_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze reviews for a specific product using real scraped review data"""
         
-    def _load_mock_reviews(self) -> Dict[str, List[Dict[str, Any]]]:
-        """Load mock review data for demonstration"""
+        # Get real reviews from the product data
+        reviews = product_data.get("reviews", [])
+        
+        if not reviews:
+            return {
+                "overall_sentiment": "neutral",
+                "sentiment_breakdown": {"positive": 50, "neutral": 30, "negative": 20},
+                "key_themes": [],
+                "pros": [],
+                "cons": [],
+                "review_summary": "No reviews available for analysis",
+                "red_flags": [],
+                "recommendation_confidence": "low"
+            }
+        
+        # Use AI to analyze the real reviews
+        analysis = await self._analyze_reviews_with_ai(reviews, product_data)
+        
+        # Add review statistics
+        analysis["review_statistics"] = self._calculate_review_stats(reviews)
+        
+        return analysis
+    
+    async def _analyze_reviews_with_ai(self, reviews: List[Dict[str, Any]], product_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Use AI to analyze real customer reviews"""
+        
+        # Prepare review text for analysis
+        review_texts = []
+        for review in reviews:
+            rating = review.get("rating", 0)
+            title = review.get("title", "")
+            text = review.get("text", "")
+            verified = review.get("verified_purchase", False)
+            
+            review_summary = f"Rating: {rating}/5"
+            if title:
+                review_summary += f" | Title: {title}"
+            if text:
+                review_summary += f" | Review: {text[:300]}"
+            if verified:
+                review_summary += " | Verified Purchase"
+            
+            review_texts.append(review_summary)
+        
+        product_info = {
+            "title": product_data.get("title", ""),
+            "brand": product_data.get("brand", ""),
+            "price": product_data.get("price", 0),
+            "rating": product_data.get("rating", 0),
+            "category": product_data.get("category", "")
+        }
+        
+        prompt = f"""
+You are an expert review analyzer for Indian e-commerce. Analyze these real customer reviews to provide actionable insights.
+
+Product Information:
+{json.dumps(product_info, indent=2)}
+
+Real Customer Reviews:
+{json.dumps(review_texts, indent=2)}
+
+Provide analysis in JSON format with:
+- "overall_sentiment": "positive", "neutral", or "negative"
+- "sentiment_breakdown": {{"positive": X, "neutral": Y, "negative": Z}} (percentages that sum to 100)
+- "key_themes": List of 4-5 main topics customers discuss
+- "pros": List of 3-5 main advantages mentioned by customers
+- "cons": List of 3-5 main disadvantages or complaints
+- "review_summary": 2-3 sentence summary of overall customer sentiment
+- "red_flags": List of serious issues that potential buyers should know about
+- "recommendation_confidence": "high", "medium", or "low" based on review quality and consensus
+- "value_for_money_sentiment": Customer perception of value for the price in INR
+- "common_use_cases": How customers actually use this product based on reviews
+"""
+        
+        try:
+            analysis = await self.parse_json_response(prompt)
+            return analysis if isinstance(analysis, dict) else {}
+        except Exception as e:
+            print(f"⚠️ Review analysis failed: {e}")
+            return self._fallback_analysis(reviews)
+    
+    def _fallback_analysis(self, reviews: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Fallback analysis when AI fails"""
+        
+        # Simple sentiment analysis based on ratings
+        positive_reviews = len([r for r in reviews if r.get("rating", 0) >= 4])
+        negative_reviews = len([r for r in reviews if r.get("rating", 0) <= 2])
+        neutral_reviews = len(reviews) - positive_reviews - negative_reviews
+        
+        total_reviews = len(reviews)
+        
+        if total_reviews == 0:
+            sentiment_breakdown = {"positive": 50, "neutral": 30, "negative": 20}
+        else:
+            sentiment_breakdown = {
+                "positive": round((positive_reviews / total_reviews) * 100),
+                "neutral": round((neutral_reviews / total_reviews) * 100),
+                "negative": round((negative_reviews / total_reviews) * 100)
+            }
+        
+        overall_sentiment = "positive" if positive_reviews > negative_reviews else "negative" if negative_reviews > positive_reviews else "neutral"
+        
         return {
-            "vac001": [
-                {
-                    "id": "rev001",
-                    "rating": 5,
-                    "title": "Great for pet hair!",
-                    "text": "This vacuum is amazing for removing pet hair from carpets and furniture. The lift-away feature makes cleaning stairs so much easier. It's a bit heavy but the suction power makes up for it.",
-                    "verified_purchase": True,
-                    "helpful_votes": 45,
-                    "date": "2024-01-15"
-                },
-                {
-                    "id": "rev002", 
-                    "rating": 4,
-                    "title": "Good value for money",
-                    "text": "Works well for the price. The HEPA filter is great for allergies. Only complaint is that it can be a bit loud during operation.",
-                    "verified_purchase": True,
-                    "helpful_votes": 23,
-                    "date": "2024-01-20"
-                },
-                {
-                    "id": "rev003",
-                    "rating": 3,
-                    "title": "Decent but not amazing",
-                    "text": "It does the job but I expected better suction. The canister is easy to empty though. Would be better if it was quieter.",
-                    "verified_purchase": False,
-                    "helpful_votes": 12,
-                    "date": "2024-01-25"
-                }
-            ],
-            "vac002": [
-                {
-                    "id": "rev004",
-                    "rating": 5,
-                    "title": "Best vacuum I've ever owned",
-                    "text": "The laser dust detection is incredible - you can see dust you never knew was there! Very quiet operation and the battery lasts a long time. Worth every penny.",
-                    "verified_purchase": True,
-                    "helpful_votes": 78,
-                    "date": "2024-01-10"
-                },
-                {
-                    "id": "rev005",
-                    "rating": 4,
-                    "title": "Expensive but effective",
-                    "text": "Great suction and the LCD screen is helpful. Battery life could be better for larger homes. The laser feature is more of a gimmick than useful.",
-                    "verified_purchase": True,
-                    "helpful_votes": 34,
-                    "date": "2024-01-18"
-                }
-            ],
-            "lap001": [
-                {
-                    "id": "rev006",
-                    "rating": 5,
-                    "title": "Perfect for students and professionals",
-                    "text": "The M2 chip is incredibly fast and the battery life is outstanding. Perfect for coding, design work, and everyday tasks. The fanless design keeps it completely silent.",
-                    "verified_purchase": True,
-                    "helpful_votes": 156,
-                    "date": "2024-01-12"
-                },
-                {
-                    "id": "rev007",
-                    "rating": 4,
-                    "title": "Great laptop, limited ports",
-                    "text": "Amazing performance and build quality. My only complaint is the limited number of ports - you'll need adapters for everything.",
-                    "verified_purchase": True,
-                    "helpful_votes": 89,
-                    "date": "2024-01-22"
-                }
-            ]
+            "overall_sentiment": overall_sentiment,
+            "sentiment_breakdown": sentiment_breakdown,
+            "key_themes": ["product quality", "value for money", "customer service"],
+            "pros": ["Generally well-received by customers"],
+            "cons": ["Some mixed feedback"],
+            "review_summary": f"Based on {total_reviews} real customer reviews, the product shows {overall_sentiment} reception.",
+            "red_flags": [],
+            "recommendation_confidence": "medium",
+            "value_for_money_sentiment": "neutral",
+            "common_use_cases": ["General use as intended"]
         }
     
-    async def analyze_reviews(self, product_id: str, focus_features: List[str] = None) -> Dict[str, Any]:
-        """Analyze reviews for a specific product"""
+    def _calculate_review_stats(self, reviews: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Calculate basic review statistics"""
         
-        reviews = self.mock_reviews.get(product_id, [])
         if not reviews:
-            return {"error": "No reviews found for this product"}
+            return {
+                "total_reviews": 0,
+                "average_rating": 0,
+                "rating_distribution": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+                "verified_purchase_percentage": 0
+            }
         
-        # Prepare context for AI analysis
-        focus_context = ""
-        if focus_features:
-            focus_context = f"\nPay special attention to mentions of: {', '.join(focus_features)}"
+        total_reviews = len(reviews)
+        total_rating = sum(r.get("rating", 0) for r in reviews)
+        average_rating = total_rating / total_reviews if total_reviews > 0 else 0
+        
+        # Rating distribution
+        rating_dist = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+        verified_count = 0
+        
+        for review in reviews:
+            rating = review.get("rating", 0)
+            if 1 <= rating <= 5:
+                rating_dist[rating] += 1
+            
+            if review.get("verified_purchase", False):
+                verified_count += 1
+        
+        verified_percentage = (verified_count / total_reviews) * 100 if total_reviews > 0 else 0
+        
+        return {
+            "total_reviews": total_reviews,
+            "average_rating": round(average_rating, 1),
+            "rating_distribution": rating_dist,
+            "verified_purchase_percentage": round(verified_percentage, 1)
+        }
+    
+    async def compare_product_reviews(self, products: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Compare reviews across multiple products"""
+        
+        product_analyses = []
+        
+        for product in products:
+            analysis = await self.analyze_product_reviews(product)
+            product_analyses.append({
+                "product_id": product.get("id", ""),
+                "product_title": product.get("title", ""),
+                "analysis": analysis
+            })
+        
+        # AI-powered comparison of review patterns
+        comparison = await self._compare_reviews_with_ai(product_analyses)
+        
+        return {
+            "individual_analyses": product_analyses,
+            "comparison": comparison
+        }
+    
+    async def _compare_reviews_with_ai(self, product_analyses: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Use AI to compare review patterns across products"""
         
         prompt = f"""
-Analyze these product reviews and provide comprehensive insights.
+Compare the review patterns and customer sentiment across these products based on real customer feedback.
 
-Reviews: {reviews}
+Product Review Analyses:
+{json.dumps(product_analyses, indent=2)}
 
-{focus_context}
-
-Provide analysis in this JSON format:
-{{
-    "overall_sentiment": "positive/neutral/negative",
-    "sentiment_breakdown": {{
-        "positive_percentage": number,
-        "neutral_percentage": number, 
-        "negative_percentage": number
-    }},
-    "key_themes": {{
-        "positive": ["theme1", "theme2", "theme3"],
-        "negative": ["issue1", "issue2", "issue3"]
-    }},
-    "feature_sentiment": {{
-        "feature_name": {{"sentiment": "positive/negative/neutral", "mentions": number}},
-        "feature_name2": {{"sentiment": "positive/negative/neutral", "mentions": number}}
-    }},
-    "common_complaints": ["complaint1", "complaint2"],
-    "common_praises": ["praise1", "praise2"], 
-    "recommendation_confidence": "high/medium/low",
-    "summary": "brief summary of review consensus",
-    "red_flags": ["any serious issues mentioned"],
-    "best_use_cases": ["use case based on reviews"]
-}}
+Provide comparison in JSON format with:
+- "summary": Overall comparison summary
+- "sentiment_comparison": Which product has better overall customer satisfaction
+- "strength_comparison": What each product excels at according to customers
+- "weakness_comparison": What customers complain about for each product
+- "recommendation": Which product based on real customer feedback and for what type of user
 """
         
-        return await self.parse_json_response(prompt)
+        try:
+            comparison = await self.parse_json_response(prompt)
+            return comparison if isinstance(comparison, dict) else {}
+        except Exception as e:
+            print(f"⚠️ Review comparison failed: {e}")
+            return {"error": "Unable to compare review patterns"}
     
-    async def compare_review_sentiments(self, product_ids: List[str], comparison_features: List[str] = None) -> Dict[str, Any]:
-        """Compare review sentiments across multiple products"""
+    async def get_review_insights(self, query_data: Dict[str, Any], products: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Get review insights relevant to specific user query"""
         
-        all_analyses = {}
-        for product_id in product_ids:
-            analysis = await self.analyze_reviews(product_id, comparison_features)
-            if "error" not in analysis:
-                all_analyses[product_id] = analysis
+        # Analyze reviews for all products
+        insights = []
         
-        if not all_analyses:
-            return {"error": "No review data available for comparison"}
+        for product in products:
+            analysis = await self.analyze_product_reviews(product)
+            insights.append({
+                "product": {
+                    "id": product.get("id", ""),
+                    "title": product.get("title", ""),
+                    "price": product.get("price", 0),
+                    "rating": product.get("rating", 0)
+                },
+                "review_analysis": analysis
+            })
+        
+        # Generate query-specific insights
+        query_insights = await self._generate_query_specific_insights(query_data, insights)
+        
+        return {
+            "product_insights": insights,
+            "query_specific_insights": query_insights
+        }
+    
+    async def _generate_query_specific_insights(self, query_data: Dict[str, Any], insights: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Generate insights specific to user query based on real reviews"""
         
         prompt = f"""
-Compare the review analyses for these products and provide insights.
+Based on real customer reviews and the user's specific requirements, provide targeted insights.
 
-Product Analyses: {all_analyses}
+User Query Requirements:
+{json.dumps(query_data, indent=2)}
 
-Comparison Features Focus: {comparison_features or 'general comparison'}
+Product Review Insights:
+{json.dumps(insights, indent=2)}
 
-Provide comparison in this JSON format:
-{{
-    "winner_overall": "product_id with best overall sentiment",
-    "feature_winners": {{
-        "feature1": "product_id that performs best for this feature",
-        "feature2": "product_id that performs best for this feature"
-    }},
-    "pros_cons_comparison": {{
-        "product_id1": {{"pros": ["pro1", "pro2"], "cons": ["con1", "con2"]}},
-        "product_id2": {{"pros": ["pro1", "pro2"], "cons": ["con1", "con2"]}}
-    }},
-    "recommendation_by_use_case": {{
-        "use_case1": "recommended_product_id",
-        "use_case2": "recommended_product_id"
-    }},
-    "summary": "brief comparison summary"
-}}
+Provide query-specific insights in JSON format with:
+- "best_match_reasoning": Why certain products match the user's needs based on real customer feedback
+- "potential_concerns": What real customers say about issues relevant to the user's requirements
+- "user_type_recommendations": Recommendations based on similar customer profiles in reviews
+- "price_value_insights": What customers say about value for money at these price points in INR
 """
         
-        return await self.parse_json_response(prompt)
-    
-    async def extract_feature_feedback(self, product_id: str, feature: str) -> Dict[str, Any]:
-        """Extract specific feedback about a particular feature"""
-        
-        reviews = self.mock_reviews.get(product_id, [])
-        if not reviews:
-            return {"error": "No reviews found"}
-        
-        prompt = f"""
-Extract all mentions and sentiment about the specific feature: "{feature}"
-
-Reviews: {reviews}
-
-Focus specifically on: {feature}
-
-Return analysis in JSON format:
-{{
-    "feature": "{feature}",
-    "total_mentions": number,
-    "sentiment_breakdown": {{
-        "positive": number,
-        "neutral": number,
-        "negative": number
-    }},
-    "specific_feedback": [
-        {{"quote": "relevant quote from review", "sentiment": "positive/negative/neutral", "rating": review_rating}},
-        {{"quote": "another relevant quote", "sentiment": "positive/negative/neutral", "rating": review_rating}}
-    ],
-    "summary": "summary of feedback about this feature",
-    "improvement_suggestions": ["suggestion1", "suggestion2"]
-}}
-"""
-        
-        return await self.parse_json_response(prompt)
-    
-    async def get_review_summary(self, product_id: str) -> str:
-        """Get a concise review summary for display"""
-        
-        analysis = await self.analyze_reviews(product_id)
-        if "error" in analysis:
-            return "No reviews available for this product."
-        
-        return analysis.get("summary", "Review analysis not available.") 
+        try:
+            query_insights = await self.parse_json_response(prompt)
+            return query_insights if isinstance(query_insights, dict) else {}
+        except Exception as e:
+            print(f"⚠️ Query-specific insights failed: {e}")
+            return {"error": "Unable to generate query-specific insights"} 

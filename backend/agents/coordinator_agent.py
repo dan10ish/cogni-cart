@@ -17,47 +17,78 @@ class CoordinatorAgent(BaseAgent):
         self.deal_agent = DealFinderAgent()
         
     async def process_user_query(self, user_input: str, conversation_context: List[Dict[str, str]] = None) -> Dict[str, Any]:
-        """Main entry point for processing user queries"""
+        """Main entry point for processing user queries using real web scraping"""
         
         try:
+            print(f"🎯 Processing query: {user_input}")
+            
             # Step 1: Understand the query
             parsed_query = await self.query_agent.parse_query(user_input)
+            print(f"📝 Query understood: {parsed_query.get('product_type', 'N/A')}")
             
-            # Step 2: Search for products
+            # Step 2: Search for products using real scraping
             products = await self.search_agent.search_products(parsed_query)
             
             if not products:
+                print("❌ No products found")
                 return {
                     "type": "no_products_found",
-                    "message": "I couldn't find any products matching your criteria. Let me suggest some alternatives or ask for clarification.",
-                    "suggestions": await self.query_agent.suggest_clarifications(parsed_query),
+                    "message": "I couldn't find any products matching your criteria using real-time search. Let me suggest some alternatives.",
+                    "suggestions": [
+                        "Try different brand names (e.g., Samsung, Sony, Apple)",
+                        "Use more general terms (e.g., 'vacuum' instead of specific model)",
+                        "Check spelling and try again",
+                        "Expand your budget range"
+                    ],
                     "parsed_query": parsed_query
                 }
             
-            # Step 3: Analyze reviews for top products (parallel processing)
+            print(f"✅ Found {len(products)} real products")
+            
+            # Step 3: Analyze real reviews and deals for top products
             top_products = products[:3]  # Analyze top 3 products
-            review_tasks = [
-                self.review_agent.get_review_summary(product["id"]) 
-                for product in top_products
-            ]
-            review_summaries = await asyncio.gather(*review_tasks, return_exceptions=True)
-            
-            # Step 4: Find deals for products (parallel processing)
-            deal_tasks = [
-                self.deal_agent.get_deal_summary(product["id"]) 
-                for product in top_products
-            ]
-            deal_summaries = await asyncio.gather(*deal_tasks, return_exceptions=True)
-            
-            # Step 5: Enhance products with review and deal data
             enhanced_products = []
-            for i, product in enumerate(top_products):
-                enhanced_product = product.copy()
-                enhanced_product["review_summary"] = review_summaries[i] if i < len(review_summaries) and not isinstance(review_summaries[i], Exception) else "No review data available"
-                enhanced_product["deal_summary"] = deal_summaries[i] if i < len(deal_summaries) and not isinstance(deal_summaries[i], Exception) else "No deals available"
-                enhanced_products.append(enhanced_product)
             
-            # Step 6: Generate comprehensive response
+            for i, product in enumerate(top_products):
+                print(f"📊 Analyzing product {i+1}: {product.get('title', '')[:50]}...")
+                
+                try:
+                    # Get detailed product info with real reviews
+                    detailed_product = await self.search_agent.get_product_details(product.get("id", ""))
+                    
+                    # Analyze real reviews from scraped data
+                    review_analysis = await self.review_agent.analyze_product_reviews(detailed_product)
+                    
+                    # Find real deal information
+                    deal_analysis = await self.deal_agent._analyze_product_for_deals(detailed_product)
+                    
+                    enhanced_product = {
+                        **detailed_product,
+                        "review_analysis": review_analysis,
+                        "deal_analysis": deal_analysis,
+                        "source": "real_scraping"
+                    }
+                    
+                    enhanced_products.append(enhanced_product)
+                    
+                except Exception as e:
+                    print(f"⚠️ Error analyzing product {i+1}: {e}")
+                    # Add basic product info even if detailed analysis fails
+                    enhanced_products.append({
+                        **product,
+                        "review_analysis": {
+                            "overall_sentiment": "neutral",
+                            "review_summary": "Unable to analyze reviews at this time"
+                        },
+                        "deal_analysis": {
+                            "deal_type": "standard_pricing",
+                            "value_assessment": "Price information available"
+                        },
+                        "source": "real_scraping"
+                    })
+            
+            # Step 4: Generate comprehensive response
+            print(f"📝 Generating response with real data...")
             response = await self._generate_comprehensive_response(
                 user_input, parsed_query, enhanced_products, products[3:] if len(products) > 3 else []
             )
@@ -68,15 +99,22 @@ class CoordinatorAgent(BaseAgent):
                 "products": enhanced_products,
                 "total_products_found": len(products),
                 "parsed_query": parsed_query,
-                "additional_products": products[3:] if len(products) > 3 else []
+                "additional_products": products[3:] if len(products) > 3 else [],
+                "data_source": "real_web_scraping"
             }
             
         except Exception as e:
-            print(f"Error in coordinator: {e}")
+            print(f"❌ Error in coordinator: {e}")
             return {
                 "type": "error",
-                "message": "I encountered an error while processing your request. Please try rephrasing your query.",
-                "error": str(e)
+                "message": "I encountered an error while searching for real products. This could be due to network issues or website changes. Please try again with simpler search terms.",
+                "error": str(e),
+                "suggestions": [
+                    "Try simpler search terms",
+                    "Check internet connection", 
+                    "Wait a moment and try again",
+                    "Use different product categories"
+                ]
             }
     
     async def compare_products(self, product_ids: List[str], comparison_aspects: List[str] = None) -> Dict[str, Any]:

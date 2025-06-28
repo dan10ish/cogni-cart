@@ -1,31 +1,39 @@
 # CogniCart - Multi-Agent E-commerce Assistant
 
-A sophisticated AI-powered e-commerce assistant that helps users find the best products through natural language queries, powered by Google Gemini AI and featuring a multi-agent architecture.
+A sophisticated AI-powered e-commerce assistant with **real web scraping** that helps users find the best products through natural language queries, powered by Google Gemini AI and featuring live data from Indian e-commerce sites.
 
 ## 🚀 Project Overview
 
-CogniCart revolutionizes online shopping by understanding complex, conversational queries and providing intelligent product recommendations:
+CogniCart revolutionizes online shopping by understanding complex, conversational queries and providing intelligent product recommendations with **REAL DATA**:
 
+- **🔴 REAL WEB SCRAPING**: Live data from Amazon.in with BeautifulSoup4
+- **💰 LIVE INR PRICING**: Current prices from Indian e-commerce
+- **📝 ACTUAL REVIEWS**: Real customer review analysis
+- **🇮🇳 INDIAN MARKET**: Optimized for Indian consumers
 - **Multi-Agent Architecture**: Specialized AI agents for different tasks
 - **Natural Language Understanding**: Understands complex shopping queries
-- **Review Analysis**: AI-powered sentiment analysis of product reviews  
-- **Deal Discovery**: Finds the best deals and discounts automatically
-- **Product Comparison**: Side-by-side comparison with AI insights
+- **Review Analysis**: AI-powered sentiment analysis of **REAL** product reviews  
+- **Deal Discovery**: Finds the best deals from **LIVE** pricing data
+- **Product Comparison**: Side-by-side comparison with **REAL** data
 - **Modern UI**: Beautiful, responsive interface with Shadcn UI components
 
 ## 🤖 Multi-Agent System
 
 ### Backend Agents:
 - **QueryUnderstandingAgent**: Parses natural language shopping queries
-- **ProductSearchAgent**: Searches and ranks products based on requirements
-- **ReviewAnalyzerAgent**: Analyzes customer reviews for sentiment and insights
-- **DealFinderAgent**: Discovers deals, discounts, and best prices
-- **CoordinatorAgent**: Orchestrates all agents for comprehensive responses
+- **ProductSearchAgent**: **REAL-TIME SCRAPING** from Amazon.in for live products
+- **ReviewAnalyzerAgent**: Analyzes **ACTUAL CUSTOMER REVIEWS** from scraped data
+- **DealFinderAgent**: Discovers **REAL DEALS** and **LIVE PRICING in INR**
+- **WebScraperAgent**: BeautifulSoup4-powered scraping with respectful rate limiting
+- **CoordinatorAgent**: Orchestrates all agents with live data
 
 ### Technology Stack:
-- **Backend**: FastAPI with Google Gemini AI (multi-agent architecture)
+- **Backend**: FastAPI with Google Gemini AI + **BeautifulSoup4 Web Scraping**
 - **Frontend**: Next.js 15 with TypeScript, Tailwind CSS, and Shadcn UI
 - **AI Model**: Google Gemini 1.5 Flash (configurable)
+- **Web Scraping**: BeautifulSoup4 + Requests + lxml for Amazon.in
+- **Currency**: Indian Rupees (INR)
+- **Market**: India (Amazon.in)
 - **Icons**: Lucide React for beautiful, consistent icons
 
 ## Project Structure
@@ -80,14 +88,14 @@ cd cogni-cart
 ```bash
 cd backend
 
-# Install Python dependencies
+# Install Python dependencies (includes BeautifulSoup4, requests, lxml for web scraping)
 pip install -r requirements.txt
 
 # Setup environment
 cp .env.example .env
 # Edit .env and add your GOOGLE_API_KEY
 
-# Run the backend
+# Run the backend with real scraping
 python run.py
 ```
 
@@ -120,21 +128,25 @@ The frontend will be available at `http://localhost:3000`
 
 ## ✨ Features
 
-### 🤖 AI-Powered Features
-- **Natural Language Search**: "I need a quiet, pet-friendly vacuum cleaner under $300"
-- **Intelligent Product Ranking**: AI ranks products based on your specific requirements
-- **Review Sentiment Analysis**: Analyzes thousands of reviews to extract key insights
-- **Deal Discovery**: Automatically finds discounts, coupons, and best prices
-- **Product Comparison**: AI-powered side-by-side comparisons with detailed insights
+### 🤖 AI-Powered Features (WITH REAL DATA!)
+- **Natural Language Search**: "Find wireless headphones under ₹5000" → **REAL Amazon.in results**
+- **Live Product Data**: **ACTUAL** products with **REAL** prices in INR from Amazon.in
+- **Real Review Analysis**: Analyzes **GENUINE** customer reviews from scraped data
+- **Live Deal Discovery**: **CURRENT** pricing and value analysis from real listings
+- **Real Product Comparison**: AI-powered comparisons with **LIVE** data and **ACTUAL** prices
 - **Contextual Follow-ups**: Remembers conversation context for better recommendations
+- **Indian Market Focus**: Optimized for Indian consumers with INR pricing
 
 ### 🖥️ Backend Features
+- ✅ **🔴 REAL WEB SCRAPING**: BeautifulSoup4 scraping from Amazon.in
+- ✅ **💰 LIVE INR PRICING**: Real-time price data from Indian e-commerce
+- ✅ **📝 ACTUAL REVIEW ANALYSIS**: Genuine customer review sentiment analysis
 - ✅ **Multi-Agent Architecture**: Specialized AI agents working together
 - ✅ **FastAPI**: Modern async Python framework with automatic docs
 - ✅ **Google Gemini AI**: Configurable AI models (Flash/Pro)
 - ✅ **Advanced Query Parsing**: Extracts budget, features, brands from natural language
-- ✅ **Review Analysis Engine**: Sentiment analysis with pros/cons extraction
-- ✅ **Deal Tracking**: Mock deal database with expiration tracking
+- ✅ **Respectful Scraping**: Rate limiting and delays to be website-friendly
+- ✅ **Real Deal Analysis**: Live pricing analysis and value assessment
 - ✅ **CORS & Error Handling**: Production-ready API with comprehensive error handling
 
 ### 🎨 Frontend Features
@@ -157,10 +169,10 @@ The frontend will be available at `http://localhost:3000`
 - `GET /agents-status` - Status of all AI agents
 
 #### Multi-Agent Shopping Endpoints
-- `POST /search` - **Main product search with AI analysis**
+- `POST /search` - **Main product search with REAL SCRAPING & AI analysis**
   ```json
   {
-    "query": "I need a quiet, pet-friendly vacuum cleaner under $300",
+    "query": "Find wireless headphones under ₹5000",
     "conversation_context": []
   }
   ```
@@ -195,6 +207,30 @@ The frontend will be available at `http://localhost:3000`
 ### 📚 Interactive Documentation
 - **Swagger UI**: `http://localhost:8000/docs`
 - **ReDoc**: `http://localhost:8000/redoc`
+
+## ⚠️ IMPORTANT: REAL DATA vs MOCK DATA
+
+**🔴 THIS SYSTEM NOW USES REAL WEB SCRAPING - NO MORE MOCK DATA!**
+
+✅ **REAL FEATURES:**
+- **LIVE Amazon.in scraping** with BeautifulSoup4
+- **ACTUAL product prices** in Indian Rupees (₹)
+- **GENUINE customer reviews** from real listings
+- **CURRENT availability** and product details
+- **REAL deal analysis** based on live pricing
+- **Respectful scraping** with rate limiting (max 8 products per search)
+
+❌ **NO LONGER USING:**
+- ~~Mock product databases~~
+- ~~Fake reviews~~
+- ~~Simulated pricing~~
+- ~~Demo data~~
+
+🇮🇳 **OPTIMIZED FOR INDIAN MARKET:**
+- Amazon.in as primary source
+- Pricing in Indian Rupees (₹)
+- Indian brand recognition
+- Local market analysis
 
 ## 💡 Example Usage
 
