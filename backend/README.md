@@ -27,9 +27,10 @@ A FastAPI backend powered by Google Gemini AI for generating intelligent respons
    cp .env.example .env
    ```
    
-   Edit `.env` and add your Google API key:
+   Edit `.env` and add your configuration:
    ```
    GOOGLE_API_KEY=your_google_api_key_here
+   MODEL_NAME=gemini-1.5-flash
    ```
 
 ## Getting Your Google API Key
@@ -91,6 +92,16 @@ backend/
 ├── .env.example     # Environment variables template
 └── README.md        # This file
 ```
+
+## Environment Variables
+
+- `GOOGLE_API_KEY`: Your Google AI API key (required)
+- `MODEL_NAME`: Gemini model to use (optional, defaults to `gemini-1.5-flash`)
+
+Available Gemini models:
+- `gemini-1.5-flash` (default) - Fast and efficient
+- `gemini-1.5-pro` - More capable but slower
+- `gemini-1.0-pro` - Previous generation model
 
 ## Dependencies
 

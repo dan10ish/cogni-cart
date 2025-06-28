@@ -83,6 +83,7 @@ The frontend will be available at `http://localhost:3000`
 4. Add it to `backend/.env`:
    ```
    GOOGLE_API_KEY=your_api_key_here
+   MODEL_NAME=gemini-1.5-flash
    ```
 
 ## Features
@@ -175,6 +176,7 @@ npm run dev
 ```bash
 # Backend (.env)
 GOOGLE_API_KEY=your_google_api_key
+MODEL_NAME=gemini-1.5-flash
 
 # Frontend (if needed for production)
 NEXT_PUBLIC_API_URL=https://your-backend-url.com

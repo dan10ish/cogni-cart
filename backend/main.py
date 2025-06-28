@@ -26,8 +26,12 @@ class PromptRequest(BaseModel):
 class PromptResponse(BaseModel):
     response: str
 
+# Get model name from environment variable with default fallback
+MODEL_NAME = os.getenv("MODEL_NAME", "gemini-1.5-flash")
+print(f"🤖 Initializing Gemini model: {MODEL_NAME}")
+
 # Initialize the Gemini model
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel(MODEL_NAME)
 
 @app.get("/")
 async def root():
