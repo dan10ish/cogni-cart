@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "../components/ui/button";
+import { Textarea } from "../components/ui/textarea";
+import { ScrollArea } from "../components/ui/scroll-area";
 import { Send, Bot, User, ShoppingBag, Github, ExternalLink } from "lucide-react";
-import { ProcessStep } from "@/components/process-step";
-import { ProductResult } from "@/components/product-result";
+import { ProcessStep } from "../components/process-step";
+import { ProductResult } from "../components/product-result";
 
 interface Product {
   id: string;
