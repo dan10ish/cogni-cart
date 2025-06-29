@@ -1,10 +1,13 @@
 import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import google.generativeai as genai
 from typing import Optional, List, Dict, Any
 from agents.coordinator_agent import CoordinatorAgent
+import json
+import asyncio
 
 # Configure the Gemini API
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -71,6 +74,143 @@ async def root():
         "currency": "INR",
         "market": "India"
     }
+
+async def generate_search_stream(query: str, conversation_context: List[Dict[str, str]] = None):
+    """Generate streaming response for product search"""
+    
+    def send_step(step_type: str, message: str, data: Any = None):
+        response = {
+            "type": step_type,
+            "message": message,
+            "data": data,
+            "timestamp": asyncio.get_event_loop().time()
+        }
+        return f"data: {json.dumps(response)}\n\n"
+    
+    try:
+        # Step 1: Query understanding
+        yield send_step("process", "🎯 Understanding your query...")
+        await asyncio.sleep(0.5)
+        
+        parsed_query = await coordinator.query_agent.parse_query(query)
+        product_type = parsed_query.get('product_type', 'products')
+        yield send_step("process", f"📝 Query understood: {product_type}")
+        await asyncio.sleep(0.5)
+        
+        # Step 2: Product search
+        yield send_step("process", "🚀 Searching product database...")
+        await asyncio.sleep(0.8)
+        
+        products = await coordinator.search_agent.search_products(parsed_query)
+        
+        if not products:
+            yield send_step("error", "❌ No products found")
+            yield send_step("final", "No products found", {
+                "type": "no_products_found",
+                "message": "I couldn't find any products matching your criteria.",
+                "suggestions": ["Try different keywords", "Check spelling", "Broaden your search"]
+            })
+            return
+        
+        yield send_step("process", f"✅ Found {len(products)} products")
+        await asyncio.sleep(0.5)
+        
+        # Step 3: Product analysis
+        top_products = products[:3]
+        enhanced_products = []
+        
+        for i, product in enumerate(top_products):
+            product_title = product.get('title', '')[:50] + "..."
+            yield send_step("process", f"📊 Analyzing product {i+1}: {product_title}")
+            await asyncio.sleep(0.7)
+            
+            try:
+                # Get detailed product info
+                detailed_product = await coordinator.search_agent.get_product_details(product.get("id", ""))
+                
+                # Analyze reviews
+                review_analysis = await coordinator.review_agent.analyze_product_reviews(detailed_product)
+                
+                # Find deals
+                deal_analysis = await coordinator.deal_agent._analyze_product_for_deals(detailed_product)
+                
+                enhanced_product = {
+                    **detailed_product,
+                    "review_analysis": review_analysis,
+                    "deal_analysis": deal_analysis,
+                    "source": "real_scraping"
+                }
+                
+                enhanced_products.append(enhanced_product)
+                yield send_step("process", f"✅ Product {i+1} analyzed successfully")
+                
+            except Exception as e:
+                error_msg = str(e)
+                yield send_step("process", f"⚠️ Partial analysis for product {i+1}: {error_msg}")
+                
+                # Add basic product info even if detailed analysis fails
+                enhanced_products.append({
+                    **product,
+                    "review_analysis": {
+                        "overall_sentiment": "neutral",
+                        "review_summary": "Analysis unavailable"
+                    },
+                    "deal_analysis": {
+                        "deal_type": "standard_pricing",
+                        "value_assessment": "Price information available"
+                    },
+                    "source": "basic_search"
+                })
+            
+            await asyncio.sleep(0.3)
+        
+        # Step 4: Generate response
+        yield send_step("process", "📝 Generating recommendations...")
+        await asyncio.sleep(1.0)
+        
+        response = await coordinator._generate_comprehensive_response(
+            query, parsed_query, enhanced_products, products[3:] if len(products) > 3 else []
+        )
+        
+        # Final response
+        final_data = {
+            "type": "product_recommendations",
+            "response": response,
+            "products": enhanced_products,
+            "total_products_found": len(products),
+            "parsed_query": parsed_query,
+            "additional_products": products[3:] if len(products) > 3 else [],
+            "data_source": "real_web_scraping"
+        }
+        
+        yield send_step("final", "✨ Recommendations ready!", final_data)
+        
+    except Exception as e:
+        yield send_step("error", f"❌ Error: {str(e)}")
+        yield send_step("final", "Search completed with errors", {
+            "type": "error",
+            "message": "I encountered an error while searching. Please try again.",
+            "error": str(e)
+        })
+
+@app.post("/search-stream")
+async def search_products_stream(request: ProductSearchRequest):
+    """Streaming endpoint for product search with real-time updates"""
+    
+    if not request.query.strip():
+        raise HTTPException(status_code=400, detail="Search query cannot be empty")
+    
+    return StreamingResponse(
+        generate_search_stream(request.query, request.conversation_context),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Methods": "*"
+        }
+    )
 
 @app.post("/search")
 async def search_products(request: ProductSearchRequest):

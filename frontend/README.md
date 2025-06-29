@@ -1,93 +1,71 @@
 # CogniCart Frontend
 
-A minimal ChatGPT-style interface built with Next.js, TypeScript, and Shadcn UI that connects to the AI-powered shopping assistant backend.
+A minimal ChatGPT-style interface with **real-time streaming** built with Next.js, TypeScript, and Shadcn UI that connects to the AI-powered shopping assistant backend.
+
+## ✨ Latest Features (Updated)
+
+### 🚀 Real-Time Streaming
+- **Live Process Steps**: Shows actual backend processing steps in real-time
+- **Server-Sent Events (SSE)**: Streams data from backend as it processes
+- **Typing Animation**: Shows live progress while AI analyzes products
+- **Process Visualization**: Displays steps like "🎯 Understanding query", "🚀 Searching database", "📊 Analyzing products"
+
+### 🎨 Enhanced Interface
+- **Sticky Header**: Header stays fixed during scroll with branding and links
+- **Personal Links**: Quick access to portfolio (dan10ish.github.io) and GitHub repo
+- **Sticky Avatars**: Chat avatars stick to top during long conversations
+- **Improved Input**: Better responsive input area that stays at bottom
+- **Dark Mode**: Consistent dark theme throughout the application
+
+### 🛒 Working Product Links
+- **Real URLs**: Each product links to actual Amazon India pages
+- **Click to Buy**: "View" buttons open actual product pages
+- **Fallback Search**: If no URL available, falls back to Google search
+- **External Link Indicators**: Clear icons showing external navigation
+
+### 💰 Indian Market Focus
+- **Rupee Currency (₹)**: All prices displayed in Indian Rupees
+- **Indian Formatting**: Proper number formatting for Indian locale
+- **Amazon India**: Direct links to Amazon.in product pages
+- **Localized Content**: Pricing and availability for Indian market
 
 ## Features
 
 - **ChatGPT-style Interface**: Clean, conversational UI with minimal design
+- **Real-Time Streaming**: Live updates showing backend AI processing steps
 - **Dark Mode**: Default dark theme for better user experience
 - **Process Visualization**: Real-time display of backend processing steps
-- **Product Results**: Minimal product cards with Indian Rupee currency
+- **Product Results**: Minimal product cards with working Amazon links
 - **Responsive Design**: Optimized for desktop and mobile
-- **Real-time Loading**: Animated process steps during search
 - **Bold Text Formatting**: Proper rendering of bold text from AI responses
+- **Sticky Elements**: Header and input area remain accessible during scroll
 
-## Recent Changes
+## Recent Major Updates
 
-### Complete Frontend Redesign
-- Replaced complex card-based layout with ChatGPT-style conversation interface
-- Implemented dark mode as default theme
-- Added real-time process step visualization
-- Simplified product display with minimal cards
-- Changed currency from USD ($) to Indian Rupee (₹)
-- Removed unnecessary components and modals for cleaner experience
-- Added proper bold text formatting (** markdown to HTML bold)
+### Complete Streaming Implementation
+- Added Server-Sent Events (SSE) support for real-time updates
+- Backend now streams process steps as they happen
+- Frontend displays live progress with animated indicators
+- Shows actual backend logs: "Understanding query", "Found X products", "Analyzing product 1", etc.
 
-### Removed Components
-- `search-interface.tsx` - Replaced with inline search input
-- `product-card.tsx` - Replaced with `product-result.tsx`
-- `product-details-modal.tsx` - Simplified to inline display
+### UI/UX Improvements
+- **Sticky Header**: Fixed header with CogniCart branding and tagline
+- **Personal Links**: Added portfolio and GitHub links with appropriate icons
+- **Better Avatars**: Chat avatars now stick to visible area during scroll
+- **Enhanced Input**: Improved bottom input area with better styling
+- **Product Cards**: Clickable cards with working Amazon India links
 
-### New Components
-- `process-step.tsx` - Shows backend processing with animated steps
-- `product-result.tsx` - Minimal product display with rupee symbols
+### Working Product Integration
+- **Real URLs**: Products now have working links to Amazon India
+- **Fixed View Buttons**: Each product's "View" button opens the actual product page
+- **Better Error Handling**: Shows appropriate fallbacks when links unavailable
+- **External Link Safety**: Opens links in new tabs with security measures
 
-## Prerequisites
-
-- Node.js 18+
-- npm or yarn
-- Running backend server (see backend README)
-
-## Installation
-
-1. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-## Running the Application
-
-### Development Mode
-```bash
-npm run dev
-```
-
-### Production Build
-```bash
-npm run build
-npm start
-```
-
-The application will be available at `http://localhost:3000`
-
-## Interface Overview
-
-### Main Layout
-- **Header**: Simple branding with CogniCart logo
-- **Chat Area**: Scrollable conversation view with user/assistant messages
-- **Input Area**: Fixed bottom input with send button
-
-### Message Types
-- **User Messages**: Right-aligned with user avatar
-- **Assistant Messages**: Left-aligned with bot avatar
-- **Process Steps**: Animated loading indicators showing backend progress
-- **Product Results**: Minimal cards showing product information
-
-### Process Visualization
-The interface shows real-time backend processing steps:
-- Understanding your query...
-- Searching product database...
-- Analyzing products...
-- Generating recommendations...
-
-### Product Display
-Products are shown with:
-- Product title and brand
-- Star ratings and review counts
-- Key features (first 3 displayed)
-- Indian Rupee pricing with proper formatting
-- Review summaries when available
-- Deal information if applicable
+### Backend Streaming Support
+- **New Endpoint**: `/search-stream` for real-time updates
+- **Process Broadcasting**: Backend broadcasts each processing step
+- **Better Error Handling**: Streams errors and recovery steps
+- **Maintains Compatibility**: Original `/search` endpoint still works
 
 ## Project Structure
 
@@ -96,10 +74,10 @@ frontend/
 ├── app/
 │   ├── globals.css      # Global styles with dark mode theme
 │   ├── layout.tsx       # Root layout with dark mode enabled
-│   └── page.tsx         # Main ChatGPT-style interface
+│   └── page.tsx         # Main streaming ChatGPT-style interface
 ├── components/
-│   ├── process-step.tsx # Backend process visualization
-│   ├── product-result.tsx # Minimal product display
+│   ├── process-step.tsx # Real-time backend process visualization
+│   ├── product-result.tsx # Product cards with working Amazon links
 │   └── ui/              # Shadcn UI components
 ├── components.json      # Shadcn configuration
 ├── next.config.ts       # Next.js configuration
@@ -107,47 +85,65 @@ frontend/
 └── package.json         # Dependencies and scripts
 ```
 
-## Key Features
+## Key Technical Features
 
-### Dark Mode
-- Enabled by default in layout.tsx
-- Uses Shadcn UI dark theme variables
-- Consistent across all components
+### Streaming Implementation
+- **EventSource Alternative**: Custom SSE handling with fetch streams
+- **Real-Time Updates**: Live process steps as backend executes
+- **Buffer Management**: Proper handling of streamed data chunks
+- **Error Recovery**: Graceful handling of connection issues
 
-### Currency Formatting
-- All prices display in Indian Rupees (₹)
-- Proper number formatting with Indian locale
-- Rupee icon from Lucide React
+### UI Components
+- **ProcessStep Component**: Shows current and previous processing steps
+- **ProductResult Component**: Enhanced product cards with working links
+- **Sticky Elements**: Header and input area with backdrop blur effects
+- **Responsive Design**: Mobile-first with proper breakpoints
 
-### Text Formatting
-- Markdown-style ** bold ** converted to HTML <strong>
-- Line breaks preserved in AI responses
-- Clean typography with proper spacing
-
-### Process Steps
-- 4-step animated process during searches
-- Icons change every second during loading
-- Provides user feedback for backend processing
+### Product Integration
+- **Amazon Integration**: Direct links to Amazon India product pages
+- **URL Validation**: Checks for valid product URLs before linking
+- **Fallback Mechanism**: Google search fallback for missing URLs
+- **External Link Handling**: Secure external link opening
 
 ## Configuration
 
 ### Backend Connection
-Update the backend URL in `app/page.tsx` if needed:
+The frontend connects to both streaming and standard endpoints:
 
 ```typescript
+// Streaming endpoint for real-time updates
+const response = await fetch("http://localhost:8000/search-stream", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ query: inputQuery }),
+});
+
+// Standard endpoint (fallback)
 const response = await fetch("http://localhost:8000/search", {
   // ... configuration
 });
 ```
 
+### Personal Links
+Update the header links in `app/page.tsx`:
+
+```typescript
+// Portfolio link
+onClick={() => window.open("https://dan10ish.github.io", "_blank")}
+
+// GitHub repository link  
+onClick={() => window.open("https://github.com/dan10ish/cogni-cart", "_blank")}
+```
+
 ### Customization
 - **Colors**: Modify CSS variables in `app/globals.css`
-- **Process Steps**: Update steps array in `components/process-step.tsx`
+- **Process Steps**: Backend streams actual process steps
 - **Product Layout**: Customize `components/product-result.tsx`
+- **Header Content**: Update branding and links in main page component
 
 ## Available Scripts
 
-- `npm run dev`: Start development server
+- `npm run dev`: Start development server with hot reload
 - `npm run build`: Build for production
 - `npm run start`: Start production server
 - `npm run lint`: Run ESLint
@@ -155,32 +151,64 @@ const response = await fetch("http://localhost:8000/search", {
 ## Dependencies
 
 ### Core
-- `next`: React framework
-- `react`: React library
-- `typescript`: Type safety
+- `next`: React framework with App Router
+- `react`: React library with hooks
+- `typescript`: Type safety and better development experience
 
 ### UI & Styling
-- `tailwindcss`: Utility-first CSS
-- `@radix-ui/*`: Headless UI primitives
-- `lucide-react`: Icon library (includes IndianRupee icon)
+- `tailwindcss`: Utility-first CSS framework
+- `@radix-ui/*`: Headless UI primitives for accessibility
+- `lucide-react`: Icon library (includes IndianRupee, Github, User icons)
 - `class-variance-authority`: Component variants
 
-## Usage
+## Usage Guide
 
+### Basic Search
 1. Type your shopping query in the input field
 2. Press Enter or click Send button
-3. Watch the animated process steps
-4. View AI response and product results
-5. Click "View" on products for more details
+3. Watch real-time process steps as AI works
+4. View AI response with formatted text
+5. Click "View" on any product to open Amazon page
+
+### Streaming Features
+- **Live Updates**: See each processing step as it happens
+- **Progress Tracking**: Visual indicators show current and completed steps
+- **Error Handling**: Real-time error reporting with recovery suggestions
+- **Rich Formatting**: Bold text, proper currency formatting, line breaks
+
+### Navigation
+- **Portfolio Link**: Click user icon in header to visit dan10ish.github.io
+- **GitHub Repo**: Click GitHub icon to view project repository
+- **Product Links**: Click "View" button on products to open Amazon India pages
+- **Sticky Elements**: Header and input remain accessible during scroll
 
 ## Troubleshooting
 
-### Backend Connection
-- Ensure backend is running on port 8000
-- Check browser console for CORS errors
-- Verify API endpoints are accessible
+### Streaming Issues
+- **Connection Errors**: Check if backend is running on port 8000
+- **SSE Problems**: Verify CORS headers in backend configuration
+- **Process Steps Not Showing**: Ensure `/search-stream` endpoint is available
 
-### UI Issues
-- Clear browser cache if styles don't load
-- Check that dark mode is properly applied
-- Verify all components are properly imported
+### Product Link Issues
+- **Amazon Links Not Working**: Products should have valid `url` field
+- **View Button Not Responding**: Check browser console for errors
+- **External Links Blocked**: Ensure popup blocker allows new tabs
+
+### UI/Performance Issues
+- **Sticky Elements Not Working**: Verify CSS backdrop-blur support
+- **Dark Mode Issues**: Check CSS variables in globals.css
+- **Mobile Responsiveness**: Test responsive breakpoints
+
+## Development Notes
+
+### Backend Requirements
+- Backend must implement `/search-stream` endpoint
+- Proper CORS configuration for streaming
+- SSE format: `data: {JSON}\n\n`
+
+### Browser Compatibility
+- **Modern Browsers**: Requires EventSource/Stream support
+- **Mobile Browsers**: Full responsive design included
+- **Accessibility**: Uses Radix UI primitives for better a11y
+
+This frontend provides a modern, responsive, and feature-rich interface for the CogniCart AI shopping assistant with real-time streaming capabilities and working product integration.

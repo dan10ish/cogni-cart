@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, ShoppingBag } from "lucide-react";
+import { Send, Bot, User, ShoppingBag, Github, ExternalLink } from "lucide-react";
 import { ProcessStep } from "@/components/process-step";
 import { ProductResult } from "@/components/product-result";
 
@@ -22,6 +22,7 @@ interface Product {
   availability: string;
   review_summary?: string;
   deal_summary?: string;
+  url?: string;
 }
 
 interface Message {
@@ -31,6 +32,7 @@ interface Message {
   products?: Product[];
   isLoading?: boolean;
   processSteps?: string[];
+  currentStep?: string;
 }
 
 export default function Home() {
@@ -57,6 +59,7 @@ export default function Home() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const inputQuery = input.trim();
     setInput("");
     setIsLoading(true);
 
@@ -66,35 +69,67 @@ export default function Home() {
       content: "",
       isLoading: true,
       processSteps: [],
+      currentStep: "",
     };
 
     setMessages(prev => [...prev, assistantMessage]);
 
     try {
-      const response = await fetch("http://localhost:8000/search", {
+      // Use streaming endpoint
+      const response = await fetch("http://localhost:8000/search-stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ query: input.trim() }),
+        body: JSON.stringify({ query: inputQuery }),
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      
-      setMessages(prev => prev.map(msg => 
-        msg.id === assistantMessage.id 
-          ? {
-              ...msg,
-              content: data.response,
-              products: data.products,
-              isLoading: false,
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No reader available");
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              setMessages(prev => prev.map(msg => 
+                msg.id === assistantMessage.id 
+                  ? {
+                      ...msg,
+                      currentStep: data.type === "process" ? data.message : msg.currentStep,
+                      processSteps: data.type === "process" 
+                        ? [...(msg.processSteps || []), data.message] 
+                        : msg.processSteps,
+                      isLoading: data.type !== "final" && data.type !== "error",
+                      content: data.type === "final" && data.data?.response ? data.data.response : msg.content,
+                      products: data.type === "final" && data.data?.products ? data.data.products : msg.products,
+                    }
+                  : msg
+              ));
+              
+            } catch (e) {
+              console.warn("Failed to parse SSE data:", e);
             }
-          : msg
-      ));
+          }
+        }
+      }
 
     } catch (error) {
       console.error("Error:", error);
@@ -132,12 +167,38 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      <header className="border-b border-border/40 p-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <ShoppingBag className="w-5 h-5 text-primary-foreground" />
+      {/* Sticky Header */}
+      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <ShoppingBag className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold">CogniCart</h1>
+              <p className="text-xs text-muted-foreground">AI-powered shopping assistant</p>
+            </div>
           </div>
-          <h1 className="text-xl font-semibold">CogniCart</h1>
+          
+          {/* Header Links */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => window.open("https://dan10ish.github.io", "_blank")}
+            >
+              <User className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => window.open("https://github.com/dan10ish/cogni-cart", "_blank")}
+            >
+              <Github className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -158,7 +219,8 @@ export default function Home() {
           <div className="space-y-6">
             {messages.map((message) => (
               <div key={message.id} className="flex gap-3">
-                <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center">
+                {/* Avatar - Sticky */}
+                <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center sticky top-20">
                   {message.type === 'user' ? (
                     <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                       <User className="w-4 h-4 text-primary-foreground" />
@@ -178,7 +240,10 @@ export default function Home() {
                   ) : (
                     <>
                       {message.isLoading && (
-                        <ProcessStep />
+                        <ProcessStep 
+                          currentStep={message.currentStep} 
+                          allSteps={message.processSteps || []}
+                        />
                       )}
                       
                       {message.content && (
@@ -198,7 +263,8 @@ export default function Home() {
           </div>
         </ScrollArea>
 
-        <div className="border-t border-border/40 p-4">
+        {/* Sticky Bottom Input */}
+        <div className="sticky bottom-0 border-t border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
           <form onSubmit={handleSubmit} className="flex gap-3">
             <div className="flex-1">
               <Textarea
@@ -207,7 +273,7 @@ export default function Home() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="What are you looking for?"
-                className="min-h-[60px] max-h-32 resize-none"
+                className="min-h-[60px] max-h-32 resize-none border-input"
                 disabled={isLoading}
               />
             </div>
