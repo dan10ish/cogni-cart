@@ -13,15 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CogniCart - AI-Powered Shopping Assistant",
-  description: "Find the perfect products with our multi-agent AI system. Natural language search, review analysis, and deal discovery all in one place.",
-  keywords: ["AI shopping", "product search", "e-commerce", "deals", "reviews", "comparison"],
-  authors: [{ name: "CogniCart Team" }],
-  openGraph: {
-    title: "CogniCart - AI-Powered Shopping Assistant",
-    description: "Revolutionize your shopping experience with AI-powered product recommendations",
-    type: "website",
-  },
+  title: "CogniCart",
+  description: "AI-Powered Shopping Assistant",
 };
 
 export default function RootLayout({
@@ -30,10 +23,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html lang="en" className="dark">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
         {children}
       </body>
     </html>

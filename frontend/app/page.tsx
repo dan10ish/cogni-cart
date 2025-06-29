@@ -1,15 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { SearchInterface } from "@/components/search-interface";
-import { ProductCard } from "@/components/product-card";
-import { ProductDetailsModal } from "@/components/product-details-modal";
-import { ShoppingBag, Brain, Zap, TrendingUp, Users, Award, GitCompare } from "lucide-react";
+import { Send, Bot, User, ShoppingBag } from "lucide-react";
+import { ProcessStep } from "@/components/process-step";
+import { ProductResult } from "@/components/product-result";
 
 interface Product {
   id: string;
@@ -27,35 +24,51 @@ interface Product {
   deal_summary?: string;
 }
 
-interface SearchResult {
-  type: string;
-  response: string;
+interface Message {
+  id: string;
+  type: 'user' | 'assistant';
+  content: string;
   products?: Product[];
-  total_products_found?: number;
-  parsed_query?: any;
-  additional_products?: Product[];
+  isLoading?: boolean;
+  processSteps?: string[];
 }
 
 export default function Home() {
-  const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [searchHistory, setSearchHistory] = useState<string[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [productDetails, setProductDetails] = useState<any>(null);
-  const [showModal, setShowModal] = useState(false);
-  const [compareList, setCompareList] = useState<string[]>([]);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load search history from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("searchHistory");
-    if (saved) {
-      setSearchHistory(JSON.parse(saved));
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
-  }, []);
+  }, [messages]);
 
-  const handleSearch = async (query: string) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: input.trim(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput("");
     setIsLoading(true);
-    setSearchResult(null);
+
+    const assistantMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      type: 'assistant',
+      content: "",
+      isLoading: true,
+      processSteps: [],
+    };
+
+    setMessages(prev => [...prev, assistantMessage]);
 
     try {
       const response = await fetch("http://localhost:8000/search", {
@@ -63,7 +76,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query: input.trim() }),
       });
 
       if (!response.ok) {
@@ -71,265 +84,143 @@ export default function Home() {
       }
 
       const data = await response.json();
-      setSearchResult(data);
-
-      // Update search history
-      const newHistory = [query, ...searchHistory.filter(h => h !== query)].slice(0, 10);
-      setSearchHistory(newHistory);
-      localStorage.setItem("searchHistory", JSON.stringify(newHistory));
+      
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessage.id 
+          ? {
+              ...msg,
+              content: data.response,
+              products: data.products,
+              isLoading: false,
+            }
+          : msg
+      ));
 
     } catch (error) {
       console.error("Error:", error);
-      setSearchResult({
-        type: "error",
-        response: "Sorry, I encountered an error. Please make sure the backend is running and try again.",
-      });
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessage.id 
+          ? {
+              ...msg,
+              content: "Sorry, I encountered an error. Please make sure the backend is running and try again.",
+              isLoading: false,
+            }
+          : msg
+      ));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleViewDetails = async (productId: string) => {
-    try {
-      const response = await fetch("http://localhost:8000/product-details", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ product_id: productId }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setProductDetails(data);
-        setSelectedProduct(data.product);
-        setShowModal(true);
-      }
-    } catch (error) {
-      console.error("Error fetching product details:", error);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
     }
   };
 
-  const handleCompare = (productId: string) => {
-    if (compareList.includes(productId)) {
-      setCompareList(prev => prev.filter(id => id !== productId));
-    } else if (compareList.length < 3) {
-      setCompareList(prev => [...prev, productId]);
-    }
-  };
-
-  const runComparison = async () => {
-    if (compareList.length < 2) return;
-
-    setIsLoading(true);
-    try {
-      const response = await fetch("http://localhost:8000/compare", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ product_ids: compareList }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSearchResult({
-          type: "comparison_result",
-          response: data.response,
-          products: data.products,
-        });
-        setCompareList([]);
-      }
-    } catch (error) {
-      console.error("Error comparing products:", error);
-    } finally {
-      setIsLoading(false);
-    }
+  const formatMessage = (content: string) => {
+    return content
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\$([\d,]+\.?\d*)/g, '₹$1')
+      .split('\n')
+      .map((line, index) => (
+        <p key={index} className={line.trim() === '' ? 'h-2' : ''} 
+           dangerouslySetInnerHTML={{ __html: line }} />
+      ));
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Header */}
-      <div className="bg-white border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <ShoppingBag className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">CogniCart</h1>
-                <p className="text-sm text-gray-600">AI-Powered Shopping Assistant</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <Badge variant="outline" className="flex items-center gap-1">
-                <Brain className="w-3 h-3" />
-                Multi-Agent AI
-              </Badge>
-              {compareList.length > 0 && (
-                <Button
-                  onClick={runComparison}
-                  disabled={compareList.length < 2}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <GitCompare className="w-4 h-4" />
-                  Compare ({compareList.length})
-                </Button>
-              )}
-            </div>
+    <div className="flex flex-col h-screen bg-background">
+      <header className="border-b border-border/40 p-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <ShoppingBag className="w-5 h-5 text-primary-foreground" />
           </div>
+          <h1 className="text-xl font-semibold">CogniCart</h1>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Features Banner */}
-        {!searchResult && (
-          <div className="mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <Card className="text-center p-4">
-                <Brain className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                <h3 className="font-semibold text-sm">Smart Understanding</h3>
-                <p className="text-xs text-gray-600">AI understands your natural language queries</p>
-              </Card>
-              <Card className="text-center p-4">
-                <Award className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                <h3 className="font-semibold text-sm">Review Analysis</h3>
-                <p className="text-xs text-gray-600">Analyzes thousands of reviews for insights</p>
-              </Card>
-              <Card className="text-center p-4">
-                <TrendingUp className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-                <h3 className="font-semibold text-sm">Deal Discovery</h3>
-                <p className="text-xs text-gray-600">Finds the best deals and discounts</p>
-              </Card>
+      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full">
+        <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                <Bot className="w-8 h-8 text-primary" />
+              </div>
+              <h2 className="text-2xl font-semibold mb-2">How can I help you shop today?</h2>
+              <p className="text-muted-foreground max-w-md">
+                I can help you find products, compare options, analyze reviews, and discover the best deals.
+              </p>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Search Interface */}
-        <div className="mb-8">
-          <SearchInterface
-            onSearch={handleSearch}
-            isLoading={isLoading}
-            searchHistory={searchHistory}
-          />
-        </div>
-
-        {/* Search Results */}
-        {searchResult && (
           <div className="space-y-6">
-            {/* AI Response */}
-            {searchResult.response && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-blue-600" />
-                    AI Assistant
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="prose max-w-none">
-                    <p className="text-gray-700 whitespace-pre-wrap">{searchResult.response}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Product Results */}
-            {searchResult.products && searchResult.products.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold flex items-center gap-2">
-                    <Users className="w-5 h-5 text-gray-600" />
-                    Product Recommendations
-                  </h2>
-                  {searchResult.total_products_found && (
-                    <Badge variant="secondary">
-                      {searchResult.total_products_found} products found
-                    </Badge>
+            {messages.map((message) => (
+              <div key={message.id} className="flex gap-3">
+                <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center">
+                  {message.type === 'user' ? (
+                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-primary-foreground" />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center">
+                      <Bot className="w-4 h-4 text-secondary-foreground" />
+                    </div>
                   )}
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {searchResult.products.map((product, index) => (
-                    <div key={`${product.id}-${index}`} className="relative">
-                      <ProductCard
-                        product={product}
-                        onViewDetails={handleViewDetails}
-                        onCompare={handleCompare}
-                      />
-                      {compareList.includes(product.id) && (
-                        <div className="absolute top-2 right-2">
-                          <Badge className="bg-blue-600 text-white">
-                            In Compare
-                          </Badge>
+                <div className="flex-1 space-y-3">
+                  {message.type === 'user' ? (
+                    <div className="text-foreground">
+                      {message.content}
+                    </div>
+                  ) : (
+                    <>
+                      {message.isLoading && (
+                        <ProcessStep />
+                      )}
+                      
+                      {message.content && (
+                        <div className="text-foreground space-y-2">
+                          {formatMessage(message.content)}
                         </div>
                       )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Additional Products */}
-                {searchResult.additional_products && searchResult.additional_products.length > 0 && (
-                  <div className="mt-8">
-                    <h3 className="text-lg font-medium mb-4">More Options</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {searchResult.additional_products.slice(0, 8).map((product, index) => (
-                        <ProductCard
-                          key={`${product.id}-additional-${index}`}
-                          product={product}
-                          onViewDetails={handleViewDetails}
-                          onCompare={handleCompare}
-                          compact={true}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* No Products Found */}
-            {searchResult.type === "no_products_found" && (
-              <Card>
-                <CardContent className="text-center py-8">
-                  <ShoppingBag className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Products Found</h3>
-                  <p className="text-gray-600 mb-4">
-                    I couldn't find any products matching your criteria. Try refining your search.
-                  </p>
-                  {searchResult.parsed_query && (
-                    <div className="text-left max-w-md mx-auto">
-                      <h4 className="font-medium mb-2">Here's what I understood:</h4>
-                      <div className="space-y-1 text-sm text-gray-600">
-                        {searchResult.parsed_query.product_type && (
-                          <p>• Looking for: {searchResult.parsed_query.product_type}</p>
-                        )}
-                        {searchResult.parsed_query.budget?.max && (
-                          <p>• Budget: Under ${searchResult.parsed_query.budget.max}</p>
-                        )}
-                        {searchResult.parsed_query.features_required?.length > 0 && (
-                          <p>• Features: {searchResult.parsed_query.features_required.join(", ")}</p>
-                        )}
-                      </div>
-                    </div>
+                      
+                      {message.products && message.products.length > 0 && (
+                        <ProductResult products={message.products} />
+                      )}
+                    </>
                   )}
-                </CardContent>
-              </Card>
-            )}
+                </div>
+              </div>
+            ))}
           </div>
-        )}
+        </ScrollArea>
 
-        {/* Product Details Modal */}
-        <ProductDetailsModal
-          product={selectedProduct}
-          isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          reviewAnalysis={productDetails?.review_analysis}
-          deals={productDetails?.deals}
-        />
+        <div className="border-t border-border/40 p-4">
+          <form onSubmit={handleSubmit} className="flex gap-3">
+            <div className="flex-1">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="What are you looking for?"
+                className="min-h-[60px] max-h-32 resize-none"
+                disabled={isLoading}
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={!input.trim() || isLoading}
+              size="lg"
+              className="h-[60px] px-4"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );
